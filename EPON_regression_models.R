@@ -2,7 +2,7 @@
 
 #  Non-linear regression of delay percentiles in TDM EPONs 
 # Jose Alberto Hernandez
-# 22 mayo 2020
+# 22 June 2021
 
 
 library(caret)
@@ -10,10 +10,12 @@ library(caret)
 rm(list=ls())
 
 
-# setwd("~/Google Drive/Research/Rexperiments")
+setwd("~/Google Drive/Research/Rexperiments")
 
 set.seed(1234)
 
+
+# 1) Poisson traffic
 
 
 
@@ -544,6 +546,119 @@ dev.off()
 pdf("SimplML_R2_10G.pdf")
 plot(pp,R2coef,ylab="R2 coef",xlab="Percentile",main="R2 for 10G EPON")
 dev.off()
+
+
+
+
+# 2) LRD traffic
+
+
+# 1G-EPON and traffic parameters, delay values in us
+
+Cpon = 1e9; Nonu = 8
+avg_packet_size = 1500; 
+sd_packet_size = 0
+dtx = avg_packet_size*8/Cpon*1e6
+
+
+# Loading delays for 1G-EPON, 4km, 8km and 20 km datasets, and normalization
+
+# 4 km
+distance = 4; tau = 5*distance;
+Delay_LRD_norm = list((na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_0138_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_01420_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_0196_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_02430_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_02865_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("LRD_1G_02919.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_03055_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_03488_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_03576_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_03935_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_04376_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_04562_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_04634_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_04745_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_05015_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_05774_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_05812_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_05868_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("LRD_1G_06322.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("LRD_1G_07044.csv", header = F)))-dtx)/tau,                 
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_07483_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("LRD_1G_08166.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_08265_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("LRD_1G_08335.csv", header = F)))-dtx)/tau,  
+                      (na.omit(as.matrix(read.csv("LRD_1G_08516.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_08898_1G.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("LRD_1G_09145.csv", header = F)))-dtx)/tau,
+                      (na.omit(as.matrix(read.csv("RESULT_8_ONU_Load_new_09201_1G.csv", header = F)))-dtx)/tau)
+
+
+
+Load = as.matrix(c(0.138, 0.196, 0.1420, 0.2430, 0.2865, 0.2919, 0.3055, 0.3488, 0.3576, 0.3935,
+                   0.4376, 0.4562, 0.4634, 0.4745, 0.5015, 0.5774, 0.5812, 0.5868, 0.6322, 0.7044,
+                   0.7483, 0.8166, 0.8265, 0.8335, 0.8516, 0.8898, 0.9145, 0.9201),nrow=1)
+
+
+# Booststrap sampling from normalized dataset
+Nsample = 5e4
+
+delay_sample =c()
+for (ii in 1:length(Delay_LRD_norm)){
+  delay_sample = cbind(delay_sample,
+                       Delay_LRD_norm[[ii]][sample(1:length(Delay_LRD_norm[[1]]),
+                                                   size=Nsample,replace=TRUE)])
+}
+
+perc_study = 0.9 # the percentile to model
+delay_sample_mean = apply(delay_sample,2,quantile,perc_study)
+
+
+# ML models: Simple and Full
+q = Load
+model_simp <- nls(delay_sample_mean ~ a*2*(2-q)/(1-q), 
+                  start = list(a=Nonu), algorithm = "default")
+
+print(model_simp)
+
+model_full <- nls(delay_sample_mean ~ (a+b*q)/(c-q), 
+                  start = list(a=Nonu,b=2,c=1), algorithm = "default")
+print(model_full)
+
+
+# Models' evaluation at 4 km
+
+distance = 4; tau = 5*distance
+
+cat("Simple model")
+R2(delay_sample_mean*tau+dtx,predict(model_simp)*tau+dtx)
+RMSE(delay_sample_mean*tau+dtx,predict(model_simp)*tau+dtx)
+
+cat("Full model")
+R2(delay_sample_mean*tau+dtx,predict(model_full)*tau+dtx)
+RMSE(delay_sample_mean*tau+dtx,predict(model_full)*tau+dtx)
+
+# plot
+
+plot(q,delay_sample_mean*tau + dtx,col='black',pch=19,
+     ylab = 'Delay Perc (us)', xlab='Load',main='90-th Percentile - LRD traffic')
+
+points(q,predict(model_full)*tau + dtx,type="p", pch=22, col="blue")
+lines(q,predict(model_full)*tau + dtx,lty=2,col="blue",lwd=1)
+
+points(q,predict(model_simp)*tau+dtx ,type="p", pch=25, col="red")
+lines(q,predict(model_simp)*tau+dtx ,lty=2,col="red",lwd=1)
+
+legend("topleft",c("Observ.","NLS Model (Full)","NLS Model (Simp)"),
+       col=c("black","blue","red"), lty=c(1,2,2), lwd=c(2,1,1), pch=c(19, 22, 25))
+dev.off() 
+
+
+
+
+
+
 
 
 
