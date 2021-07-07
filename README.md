@@ -2,7 +2,7 @@
 This project shows how to build models for delay percentiles in EPONs, using machine learning techniques 
 for the accurate characterization of delay percentiles.
 
-There are 6 datasets (csv files) where we have considered 1- and 10-Gbps EPON comprising eight ONUs. 
+There are 6 datasets (csv files) for Poisson traffic where we have considered 1- and 10-Gbps EPON comprising eight ONUs. 
 We have examined EPONs with different fiber lengths being set to 4, 8, and 20 km. 
 The guard band is set to 128 ns. 
 To arbitrate the channel access in the upstream, we have implemented the well-known interleaved 
@@ -23,4 +23,5 @@ for different delay percentiles, as explained in the next sections. Delay percen
 goal is to dimension PON scenarios where certain worse-case delay guarantees are provided. For instance, 
 the 90th delay percentile represents the delay value experienced by the top-highest 10% delay.
 
+There is also a chaoticmodel file to generate LRD traffic following the chaotic map model, and multiple LRD traces of PON delays generated under LRD traffic.
 
